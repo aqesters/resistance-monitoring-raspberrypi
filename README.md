@@ -1,8 +1,7 @@
-# load-resistance-monitoring
-Monitor load health based on calculated resistance 
+# Monitor health of resistance load using Raspberry Pi 
 
 ## Materials
-- 1x Raspberry Pi 4
+- 1x Raspberry Pi 4 (or higher)
 - 1x ADS1115 ADC
 - 1x Chanzon 0.1 Ohm metal film resistor, 1% tolerance, power rating of 2 W
 - 3x Cutequeen 10 Ohm metal film resistor, 1% tolerance, power rating of 0.25 W
@@ -29,19 +28,20 @@ Once voltage and current are measured for multiple resistors, a separate script 
 - Remove all rows after the first negative current value, which is an erroneous value that shows up when the ADC input voltage exceeds the max level supported by the ADC.
 - Calculate nominal load voltage, load resistance, and power dissipation at the load. Add these as new columns to the DataFrame.
 
-## Plotting
-The same script supports plotting the data with non-normalized or normalized axes. In this example, multiple 10-Ohm resistors from the same package are studied. 
+## Experiment 1 Results
+The same script supports plotting the data with non-normalized or normalized axes. Multiple 10-Ohm resistors from the same package are studied. 
 
 Note the sharp increase in resistance at the end. I believe that these are not real measurements, but erroneous values caused when the load voltage is above the max input level of the ADC. This is supported by the fact that the ADC produces non-sensical values (negative voltage values) soon after this resistance spike occurs.
 
-![Non-normalized plot](images/unnormalized_plot.png)
+![Non-normalized plot](images/initialtest_unnormalized_plot.png)
 
-![Normalized plot](images/normalized_plot.png)
+![Normalized plot](images/initialtest_normalized_plot.png)
 
-## Experiment conclusion
-At load powers at 1-5x max rating, resistor temperature increases significantly. The load is a metal film resistor, which has a small positive temperature coefficient. Therefore, resistance is expected to increase with temperature (or remain relatively constant in the range of this experiment). However, I've observed a decrease in resistance as power dissipation increases, which suggests that another phenomenon is occurring.
+At load powers at 1-5x max rating, resistor temperature increases significantly. The load is a metal film resistor, which has a small positive temperature coefficient. Also, given that metal film resistors have a temperature coefficient of 50 ppm, the change in resistance **due to temperature changes** should be negligible in this experiment. However, there is an apparent decrease in resistance as load power increases, suggesting another phenomenon is occurring.
 
-The following are all possible reasons for the observed resistance decrease. 
+## Experiment 1 Conclusion
+Below are some possible reasons for the observed resistance decrease.
+
 ### Resistor breakdown 
 A breakdown within the resistor element could lead to this deviation from nominal behavior. For example, high temperatures could cause carbonization and electrical shorts to form inside the resistive element, thus shortening the resistive path and decreasing resistance. 
 
@@ -52,7 +52,24 @@ The heat from the resistor conducts through the long copper leads and copper wir
 
 Follow-up: Check the ADC datasheet for temperature sensitivity information.
 
+## Experiment 2 Results
+The resistances of all three resistors were around 10-10.5 Ohms after Experiment 1, suggesting that no permanent degradation occurred. This warranted a repeat experiment to investigate further. 
+
+Experiment 2 was conducted using the same setup and resistors from Experiment 1, though the ADS1115 ADC board was replaced. While Experiment 1 collects data starting from power levels near the load's power rating, Experiment 2 collects data from power levels as low as 0.2x the load's power rating. This allows me to see whether the loads behave differently at low power vs high power. 
+
+![Non-normalized plot](images/repeattest_unnormalized_plot.png)
+
+![Normalized plot](images/repeattest_normalized_plot.png)
+
+Like Experiment 1, Experiment 2 shows a steady decrease in apparent load resistance at high powers. However, the data from Experiment 2 is notably noisier than that of Experiment 1, particularly at lower power. A new 10-Ohm resistor tested on the same setup shows similar noise levels (not plotted, see `src/res5_new.csv`), suggesting that this noise is not caused by degradation in the used resistors. This noise could be caused by thermal degradation within the experiment hardware. The experiment setup - which includes a plastic breadboard and thin wires - may be ill-suited for the elevated temperatures caused by the high electrical currents, as the breadboard had already been warped from high heat in previous experiments. Lastly, the ADS1115 ADC may be ill-suited for this type of experiment. All experiment data is acquired through the ADC. The ADC may not provide low enough noise levels to monitor the health of 1% tolerance resistors, or the ADC may be susceptible to higher noise levels at increase temperatures. 
+
+## Experiment 2 Conclusion
+It appears that the resistors were not permanently degraded in Experiment 1, given that their resistances start near 10 Ohms in Experiment 2. However, in this setup, it's impossible to conclude on (1) the degree of degradation in the resistors or (2) if the drop in load resistance at high powers is real.
+
+The ADC noise and temperature sensitivity are not well understood, and since current and power are both calculated from ADC voltage measurements, all experiment data is highly sensitive to ADC noise. This must be investigated further, starting with the ADS1115 datasheet. Furthermore, given the observed damage to the breadboard, it's clear that this hardware setup is not ideal for high current draws. 
+
+A better hardware setup for resistive load monitoring would include (1) a programmable DC power supply with built-in voltage and current monitoring, and (2) wires or PCB traces rated for current draws of over 1 Amp. 
+
 ## Next steps
-- Add figures to show hardware setup
-- Measure resistance afterwards to see if damage is permanent
-- Repeat experiment with temperature sensors to gather more info on failure modes
+- Evaluate ADC noise levels using the ADS1115 datasheet
+- For better quality data, repeat experiment using a programmable DC power supply with built-in voltage and current monitoring
